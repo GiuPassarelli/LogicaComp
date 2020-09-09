@@ -11,5 +11,6 @@ DIGIT = 0 | 1 | ... | 9;
 
 NUMBER = DIGIT, {DIGIT};
 
-TERM = NUMBER, {("*", "/"), NUMBER};//
+TERM = NUMBER, {("*", "/"), NUMBER};
+
 EXPRESSION = TERM, {("+", "-"), TERM}
