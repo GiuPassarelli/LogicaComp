@@ -13,4 +13,4 @@ NUMBER = DIGIT, {DIGIT};
 
 TERM = NUMBER, {("*" | "/"), NUMBER};
 
-EXPRESSION = TERM, {("+" | "-"), TERM}
+EXPRESSION = TERM, {("+" | "-"), TERM};
