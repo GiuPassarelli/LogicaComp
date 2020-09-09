@@ -104,6 +104,7 @@ class Parser:
                 if(type_ == "DIVIDE"):
                     if(type2 == "INT"):
                         result /= tokens.actual.value
+                        result = int(result)
                     else:
                         raise Exception("Divisão não seguida por número")
                 tokens.selectNext()
