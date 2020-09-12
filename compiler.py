@@ -67,47 +67,57 @@ class Parser:
             if(type_ == "MINUS"):
                 result -= term_result
             type_ = tokens.actual.type
-        print(result)
+        return(result)
 
     @staticmethod
     def parseTerm():
         tokens = parser.tokens
-        type1 = tokens.actual.type
-        
-        if(type1 == "INT"):
+        result = parser.parseFactor()
+        type_ = tokens.actual.type
+        while(type_ == "MULTIPLY" or type_ == "DIVIDE"):
+            tokens.selectNext()
+            factor_result = parser.parseFactor()
+            if(type_ == "MULTIPLY"):
+                result *= factor_result
+            if(type_ == "DIVIDE"):
+                result /= factor_result
+                result = int(result)
+            type_ = tokens.actual.type
+        return(result)
+
+    @staticmethod
+    def parseFactor():
+        tokens = parser.tokens
+        type_ = tokens.actual.type
+        if(type_ == "INT"):
             result = tokens.actual.value
             tokens.selectNext()
-            type_ = tokens.actual.type
-
-            while(type_ == "MULTIPLY" or type_ == "DIVIDE"):
-                tokens.selectNext()
-                type2 = tokens.actual.type
-                if(type_ == "MULTIPLY"):
-                    if(type2 == "INT"):
-                        result *= tokens.actual.value
-                    else:
-                        raise Exception("Multiplicação não seguida por número")
-                if(type_ == "DIVIDE"):
-                    if(type2 == "INT"):
-                        result /= tokens.actual.value
-                        result = int(result)
-                    else:
-                        raise Exception("Divisão não seguida por número")
-                tokens.selectNext()
-                type_ = tokens.actual.type
-
-            return(result)
+        elif(type_ == "PLUS"):
+            tokens.selectNext()
+            result = parser.parseFactor()
+        elif(type_ == "MINUS"):
+            tokens.selectNext()
+            result = -parser.parseFactor()
+        elif(type_ == "OPEN_PAR"):
+            tokens.selectNext()
+            result = parser.parseExpression()
+            if(tokens.actual.type != "CLOSE_PAR"):
+                raise Exception("Parentesis não fechado")
+            tokens.selectNext()
         else:
             raise Exception("Deu errado")
+        return result
 
     @staticmethod
     def run(code):
         clean = PrePro.filter(code)
         parser.tokens = Tokenizer(clean)
         parser.tokens.selectNext()
-        parser.parseExpression()
+        result = parser.parseExpression()
         if(parser.tokens.actual.type != "EOF"):
             raise Exception("Não terminou direito")
+        else:
+            print(result)
 
 parser = Parser()
 parser.run(sys.argv[1])
