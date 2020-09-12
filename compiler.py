@@ -20,6 +20,7 @@ class Tokenizer:
         self.origin = origin
         self.position = 0
         self.actual = None
+        self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", ")": "CLOSE_PAR"}
 
     def selectNext(self):
         parser.blank = False
@@ -32,17 +33,17 @@ class Tokenizer:
                     pos += 1
                 self.actual = Token("INT", int(carac))
 
-            elif(carac == "+"):
-                self.actual = Token("PLUS", carac)
-            elif(carac == "-"):
-                self.actual = Token("MINUS", carac)
-            elif(carac == "*"):
-                self.actual = Token("MULTIPLY", carac)
-            elif(carac == "/"):
-                self.actual = Token("DIVIDE", carac)
+            elif(carac in self.value_dict):
+                self.actual = Token(self.value_dict[carac], carac)
+
             elif(carac == " "):
                 parser.blank = True
-            elif(carac != " "):
+                type_ = self.actual.type
+                self.position += 1
+                pos = self.selectNext() - 1
+                if(self.actual.type == "INT" and type_ == "INT"):
+                    raise Exception("Números sem operação entre eles")
+            else:
                 raise Exception("Simbolo nao indentificado")
 
         else:
@@ -50,6 +51,7 @@ class Tokenizer:
 
         pos += 1
         self.position = pos
+        return self.position
 
 class Parser:
     @staticmethod
@@ -58,44 +60,28 @@ class Parser:
         result = parser.parseTerm()
         type_ = tokens.actual.type
         while(type_ == "PLUS" or type_ == "MINUS"):
+            tokens.selectNext()
             term_result = parser.parseTerm()
             if(type_ == "PLUS"):
                 result += term_result
             if(type_ == "MINUS"):
                 result -= term_result
             type_ = tokens.actual.type
-
         print(result)
 
     @staticmethod
     def parseTerm():
         tokens = parser.tokens
-        tokens.selectNext()
         type1 = tokens.actual.type
-
-        #Resolve entradas tipo "1+ 2"
-        if((type1 == "PLUS" or type1 == "MINUS") and parser.blank):
-            tokens.selectNext()
-            type1 = tokens.actual.type
         
         if(type1 == "INT"):
             result = tokens.actual.value
             tokens.selectNext()
             type_ = tokens.actual.type
 
-            #Resolve entradas tipo "1 +2"
-            if(type_ == "INT"):
-                tokens.selectNext()
-                type_ = tokens.actual.type
-                if(type_ == "INT"):
-                    raise Exception("Números sem operação entre eles")
-
             while(type_ == "MULTIPLY" or type_ == "DIVIDE"):
                 tokens.selectNext()
                 type2 = tokens.actual.type
-                if(type2 != "INT" and type2 != "EOF" and parser.blank):
-                    tokens.selectNext()
-                    type2 = tokens.actual.type
                 if(type_ == "MULTIPLY"):
                     if(type2 == "INT"):
                         result *= tokens.actual.value
@@ -109,26 +95,22 @@ class Parser:
                         raise Exception("Divisão não seguida por número")
                 tokens.selectNext()
                 type_ = tokens.actual.type
-                
-                #Resolve entradas tipo "1*2 *3"
-                if(type_ == "INT"):
-                    tokens.selectNext()
-                    type_ = tokens.actual.type
 
             return(result)
         else:
-            raise Exception("Não começa ou não termina com número ou possui simbolos repetidos")
+            raise Exception("Deu errado")
 
     @staticmethod
     def run(code):
         clean = PrePro.filter(code)
         parser.tokens = Tokenizer(clean)
+        parser.tokens.selectNext()
         parser.parseExpression()
+        if(parser.tokens.actual.type != "EOF"):
+            raise Exception("Não terminou direito")
 
 parser = Parser()
 parser.run(sys.argv[1])
 
 
-#PROBLEMAS: 
-# "2++3"
-# Chamada de selectNext antes do term (no run)
+#SO PULA 1 QUANDO EH BOLINHA!!
