@@ -23,7 +23,6 @@ class Tokenizer:
         self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", ")": "CLOSE_PAR"}
 
     def selectNext(self):
-        parser.blank = False
         pos = self.position
         if(len(self.origin)>pos):
             carac = self.origin[pos]
@@ -37,7 +36,6 @@ class Tokenizer:
                 self.actual = Token(self.value_dict[carac], carac)
 
             elif(carac == " "):
-                parser.blank = True
                 type_ = self.actual.type
                 self.position += 1
                 pos = self.selectNext() - 1
@@ -53,6 +51,48 @@ class Tokenizer:
         self.position = pos
         return self.position
 
+class Node:
+    def __init__(self, value):
+        self.value = value
+        self.children = []
+
+class BinOp(Node):
+    def __init__(self, value):
+        super().__init__(value)
+    def Evaluate(self):
+        l_child = self.children[0].Evaluate()
+        r_child = self.children[1].Evaluate()
+        if(self.value == "+"):
+            return(l_child + r_child)
+        elif(self.value == "-"):
+            return(l_child - r_child)
+        elif(self.value == "*"):
+            return(l_child * r_child)
+        elif(self.value == "/"):
+            return(int(l_child / r_child))
+
+class UnOp(Node):
+    def __init__(self, value):
+        super().__init__(value)
+    def Evaluate(self):
+        child = self.children[0].Evaluate()
+        if(self.value == "+"):
+            return(child)
+        elif(self.value == "-"):
+            return(-child)
+
+class IntVal(Node):
+    def __init__(self, value):
+        super().__init__(value)
+    def Evaluate(self):
+        return self.value
+
+class NoOp(Node):
+    def __init__(self, value, children):
+        super().__init__(value, children)
+    def Evaluate(self):
+        pass
+
 class Parser:
     @staticmethod
     def parseExpression():
@@ -60,12 +100,12 @@ class Parser:
         result = parser.parseTerm()
         type_ = tokens.actual.type
         while(type_ == "PLUS" or type_ == "MINUS"):
+            BinNode = BinOp(tokens.actual.value)
+            BinNode.children.append(result)
             tokens.selectNext()
-            term_result = parser.parseTerm()
-            if(type_ == "PLUS"):
-                result += term_result
-            if(type_ == "MINUS"):
-                result -= term_result
+
+            BinNode.children.append(parser.parseTerm())
+            result = BinNode
             type_ = tokens.actual.type
         return(result)
 
@@ -75,13 +115,12 @@ class Parser:
         result = parser.parseFactor()
         type_ = tokens.actual.type
         while(type_ == "MULTIPLY" or type_ == "DIVIDE"):
+            BinNode = BinOp(tokens.actual.value)
+            BinNode.children.append(result)
             tokens.selectNext()
-            factor_result = parser.parseFactor()
-            if(type_ == "MULTIPLY"):
-                result *= factor_result
-            if(type_ == "DIVIDE"):
-                result /= factor_result
-                result = int(result)
+
+            BinNode.children.append(parser.parseFactor())
+            result = BinNode
             type_ = tokens.actual.type
         return(result)
 
@@ -90,14 +129,13 @@ class Parser:
         tokens = parser.tokens
         type_ = tokens.actual.type
         if(type_ == "INT"):
-            result = tokens.actual.value
+            result = IntVal(tokens.actual.value)
             tokens.selectNext()
-        elif(type_ == "PLUS"):
+        elif(type_ == "PLUS" or type_ == "MINUS"):
+            result = UnOp(tokens.actual.value)
             tokens.selectNext()
-            result = parser.parseFactor()
-        elif(type_ == "MINUS"):
-            tokens.selectNext()
-            result = -parser.parseFactor()
+            result_factor = parser.parseFactor()
+            result.children.append(result_factor)
         elif(type_ == "OPEN_PAR"):
             tokens.selectNext()
             result = parser.parseExpression()
@@ -117,10 +155,15 @@ class Parser:
         if(parser.tokens.actual.type != "EOF"):
             raise Exception("Não terminou direito")
         else:
-            print(result)
+            return(result)
+
+f = open(sys.argv[1], "r")
+entrada = []
+entrada.append(str(f.read()))
 
 parser = Parser()
-parser.run(sys.argv[1])
+result = parser.run(entrada[0])
+print(result.Evaluate())
 
 
 #SO PULA 1 QUANDO EH BOLINHA!!
