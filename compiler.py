@@ -2,98 +2,72 @@
 
 import re
 import sys
-
-class Token:
-    def __init__(self, _type, value):
-        self.type = _type
-        self.value = value
+from tokenizer import Tokenizer
+from nodes import *
 
 class PrePro:
     @staticmethod
     def filter(code):
         clean = re.sub(r'#=[\D\d]*?=#', '', code)
-        clean = " ".join(clean.split())
         return clean
 
-class Tokenizer:
-    def __init__(self, origin):
-        self.origin = origin
-        self.position = 0
-        self.actual = None
-        self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", ")": "CLOSE_PAR"}
-
-    def selectNext(self):
-        pos = self.position
-        if(len(self.origin)>pos):
-            carac = self.origin[pos]
-            if(carac.isdigit()):
-                while(len(self.origin)>(pos+1) and (self.origin[pos+1]).isdigit()):
-                    carac += self.origin[pos+1]
-                    pos += 1
-                self.actual = Token("INT", int(carac))
-
-            elif(carac in self.value_dict):
-                self.actual = Token(self.value_dict[carac], carac)
-
-            elif(carac == " "):
-                type_ = self.actual.type
-                self.position += 1
-                pos = self.selectNext() - 1
-                if(self.actual.type == "INT" and type_ == "INT"):
-                    raise Exception("Números sem operação entre eles")
-            else:
-                raise Exception("Simbolo nao indentificado")
-
-        else:
-            self.actual = Token("EOF", "")
-
-        pos += 1
-        self.position = pos
-        return self.position
-
-class Node:
-    def __init__(self, value):
-        self.value = value
-        self.children = []
-
-class BinOp(Node):
-    def __init__(self, value):
-        super().__init__(value)
-    def Evaluate(self):
-        l_child = self.children[0].Evaluate()
-        r_child = self.children[1].Evaluate()
-        if(self.value == "+"):
-            return(l_child + r_child)
-        elif(self.value == "-"):
-            return(l_child - r_child)
-        elif(self.value == "*"):
-            return(l_child * r_child)
-        elif(self.value == "/"):
-            return(int(l_child / r_child))
-
-class UnOp(Node):
-    def __init__(self, value):
-        super().__init__(value)
-    def Evaluate(self):
-        child = self.children[0].Evaluate()
-        if(self.value == "+"):
-            return(child)
-        elif(self.value == "-"):
-            return(-child)
-
-class IntVal(Node):
-    def __init__(self, value):
-        super().__init__(value)
-    def Evaluate(self):
-        return self.value
-
-class NoOp(Node):
-    def __init__(self, value, children):
-        super().__init__(value, children)
-    def Evaluate(self):
-        pass
-
 class Parser:
+    @staticmethod
+    def parseBlock():
+        tokens = parser.tokens
+        StatNode = Statements(None)
+        while(tokens.actual.type != "EOF"):
+            result = parser.parseCommand()
+            StatNode.children.append(result)
+        return StatNode
+
+    @staticmethod
+    def parseCommand():
+        tokens = parser.tokens
+        type_ = tokens.actual.type
+        result = NoOp(None)
+        if(type_ == "IDENTIFIER"):
+            VarNode = IndentifierNode(tokens.actual.value)
+            tokens.selectNext()
+            type_ = tokens.actual.type
+
+            if(type_ != "IGUAL"):
+                raise Exception("Variável solta no código")
+
+            EqNode = Assignment(None)
+            EqNode.children.append(VarNode)
+
+            tokens.selectNext()
+            EqNode.children.append(parser.parseExpression())
+            result = EqNode
+                
+        if(type_ == "PRINT"):
+            PNode = PrintNode(None)
+
+            tokens.selectNext()
+            type_ = tokens.actual.type
+
+            if(type_ != "OPEN_PAR"):
+                raise Exception("Print deve ser seguido de parêntesis")
+
+            tokens.selectNext()
+            PNode.children.append(parser.parseExpression())
+            result = PNode
+
+            type_ = tokens.actual.type
+            tokens.selectNext()
+
+            if(type_ != "CLOSE_PAR"):
+                raise Exception("Parêntesis do print não fechado")
+                
+        type_ = tokens.actual.type
+        if(type_ == "ENTER"):
+            tokens.selectNext()
+            return (result)
+
+        raise Exception("Dê enter após operações")
+
+
     @staticmethod
     def parseExpression():
         tokens = parser.tokens
@@ -142,6 +116,10 @@ class Parser:
             if(tokens.actual.type != "CLOSE_PAR"):
                 raise Exception("Parentesis não fechado")
             tokens.selectNext()
+        elif(type_ == "IDENTIFIER"):
+            INode = IndentifierNode(tokens.actual.value)
+            result = INode
+            tokens.selectNext()
         else:
             raise Exception("Deu errado")
         return result
@@ -151,11 +129,10 @@ class Parser:
         clean = PrePro.filter(code)
         parser.tokens = Tokenizer(clean)
         parser.tokens.selectNext()
-        result = parser.parseExpression()
+        result = parser.parseBlock()
         if(parser.tokens.actual.type != "EOF"):
             raise Exception("Não terminou direito")
-        else:
-            return(result)
+        return(result)
 
 f = open(sys.argv[1], "r")
 entrada = []
@@ -163,7 +140,6 @@ entrada.append(str(f.read()))
 
 parser = Parser()
 result = parser.run(entrada[0])
-print(result.Evaluate())
-
+result.Evaluate()
 
 #SO PULA 1 QUANDO EH BOLINHA!!
