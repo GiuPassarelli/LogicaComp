@@ -7,8 +7,15 @@
 
 ## EBNF:
 
+BLOCK = { COMMAND };
+
+COMMAND = ( sigma | ASSIGNMENT | PRINT ), "\n" ;
+
+ASSIGNMENT = IDENTIFIER, "=", EXPRESSION ;
+
 EXPRESSION = TERM, {("+" | "-"), TERM};
 
 TERM = FACTOR, {("*" | "/"), FACTOR};
 
-FACTOR = ("+" | "-") FACTOR | "(" EXPRESSION ")" | number;
+FACTOR = (("+" | "-") FACTOR) | "(", EXPRESSION, ")" | NUMBER | IDENTIFIER;
+
