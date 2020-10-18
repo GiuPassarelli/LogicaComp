@@ -17,6 +17,16 @@ class BinOp(Node):
             return(l_child * r_child)
         elif(self.value == "/"):
             return(int(l_child / r_child))
+        elif(self.value == "&&"):
+            return(l_child and r_child)
+        elif(self.value == "||"):
+            return(l_child or r_child)
+        elif(self.value == ">"):
+            return(l_child > r_child)
+        elif(self.value == "<"):
+            return(l_child < r_child)
+        elif(self.value == "=="):
+            return(l_child == r_child)
 
 class UnOp(Node):
     def Evaluate(self):
@@ -25,6 +35,8 @@ class UnOp(Node):
             return(child)
         elif(self.value == "-"):
             return(-child)
+        elif(self.value == "!"):
+            return(not child)
 
 class NoOp(Node):
     def Evaluate(self):
@@ -47,6 +59,27 @@ class IndentifierNode(Node):
     def Evaluate(self):
         symbtable = SymbolTable(self.value)
         return symbtable.getter()
+
+class InputNode(Node):
+    def Evaluate(self):
+        value = int(input())
+        return value
+
+class WhileNode(Node):
+    def Evaluate(self):
+        while(self.children[0].Evaluate()):
+            self.children[1].Evaluate()
+
+class IfNode(Node):
+    def Evaluate(self):
+        if(self.children[0].Evaluate()):
+            self.children[1].Evaluate()
+        elif(len(self.children) == 3):
+            self.children[2].Evaluate()
+
+class ElseNode(Node):
+    def Evaluate(self):
+        self.children[0].Evaluate()
 
 #Node para "="
 class Assignment(Node):
