@@ -8,7 +8,11 @@ class Tokenizer:
         self.origin = origin
         self.position = 0
         self.actual = None
-        self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", ")": "CLOSE_PAR", "=": "IGUAL", "\n": "ENTER"}
+        self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", 
+                            ")": "CLOSE_PAR", "=": "IGUAL", "\n": "ENTER", "!": "NOT", ">": "MAIOR",
+                            "<": "MENOR"}
+        self.reserved_dict = {"println": "PRINT", "if": "IF", "elseif": "ELSEIF", "else": "ELSE", 
+                            "while": "WHILE", "end": "END", "readline": "INPUT"}
 
     def selectNext(self):
         pos = self.position
@@ -16,19 +20,29 @@ class Tokenizer:
             carac = self.origin[pos]
             if(carac.isdigit()):
                 while(len(self.origin)>(pos+1) and (self.origin[pos+1]).isdigit()):
-                    carac += self.origin[pos+1]
                     pos += 1
+                    carac += self.origin[pos]
                 self.actual = Token("INT", int(carac))
             
             elif(carac.isalpha()):
                 while(len(self.origin)>(pos+1) and ((self.origin[pos+1]).isalpha() or (self.origin[pos+1]).isdigit() or (self.origin[pos+1]) == "_")):
                     carac += self.origin[pos+1]
                     pos += 1
-                if(carac == "println"):
-                    self.actual = Token("PRINT", carac)
+                if(carac in self.reserved_dict):
+                    self.actual = Token(self.reserved_dict[carac], carac)
                 else:
                     self.actual = Token("IDENTIFIER", carac)
-
+    
+            elif(carac == "&" and self.origin[pos+1] == "&"):
+                pos+=1
+                self.actual = Token("AND", "&&")
+            elif(carac == "|" and self.origin[pos+1] == "|"):
+                pos+=1
+                self.actual = Token("OR", "||")
+            elif(carac == "=" and self.origin[pos+1] == "="):
+                pos+=1
+                self.actual = Token("COMPARACAO", "==")
+            
             elif(carac in self.value_dict):
                 self.actual = Token(self.value_dict[carac], carac)
 
