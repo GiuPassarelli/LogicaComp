@@ -55,7 +55,10 @@ class Tokenizer:
                 while(carac == " "):
                     self.position += 1
                     pos = self.selectNext() - 1
-                    carac = self.origin[pos]
+                    if(self.actual.type!="EOF"):
+                        carac = self.origin[pos]
+                    else:
+                        carac = "EOF"
                 type2 = self.actual.type
                 if((type2 == "INT" or type2 == "IDENTIFIER") and (type1 == "INT" or type1 == "IDENTIFIER")):
                     raise Exception("Números sem operação entre eles")
