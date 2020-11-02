@@ -12,12 +12,16 @@ class Tokenizer:
                             ")": "CLOSE_PAR", "=": "IGUAL", "\n": "ENTER", "!": "NOT", ">": "MAIOR",
                             "<": "MENOR"}
         self.reserved_dict = {"println": "PRINT", "if": "IF", "elseif": "ELSEIF", "else": "ELSE", 
-                            "while": "WHILE", "end": "END", "readline": "INPUT"}
+                            "while": "WHILE", "end": "END", "readline": "INPUT", "local": "LOCAL",
+                            "Int": "INTDEFINE", "Bool": "BOOLDEFINE", "String": "STRINGDEFINE",
+                            "true": "TRUE", "false": "FALSE"}
+        self.double_define = {"&": "AND", "|": "OR", "=": "COMPARACAO", ":": "DEFINICAO"}
 
     def selectNext(self):
         pos = self.position
         if(len(self.origin)>pos):
             carac = self.origin[pos]
+
             if(carac.isdigit()):
                 while(len(self.origin)>(pos+1) and (self.origin[pos+1]).isdigit()):
                     pos += 1
@@ -32,17 +36,23 @@ class Tokenizer:
                     self.actual = Token(self.reserved_dict[carac], carac)
                 else:
                     self.actual = Token("IDENTIFIER", carac)
-    
-            elif(carac == "&" and self.origin[pos+1] == "&"):
-                pos+=1
-                self.actual = Token("AND", "&&")
-            elif(carac == "|" and self.origin[pos+1] == "|"):
-                pos+=1
-                self.actual = Token("OR", "||")
-            elif(carac == "=" and self.origin[pos+1] == "="):
-                pos+=1
-                self.actual = Token("COMPARACAO", "==")
             
+            elif(carac == '"'):
+                value = ""
+                pos += 1
+                carac = self.origin[pos]
+                while(carac != '"'):
+                    if(carac == "EOF"):
+                        raise Exception("String não fechada")
+                    value += carac
+                    pos += 1
+                    carac = self.origin[pos]
+                self.actual = Token("STRING", value)
+
+            elif(carac in self.double_define and self.origin[pos+1]==carac):
+                pos+=1
+                self.actual = Token(self.double_define[carac], carac+carac)
+
             elif(carac in self.value_dict):
                 self.actual = Token(self.value_dict[carac], carac)
 

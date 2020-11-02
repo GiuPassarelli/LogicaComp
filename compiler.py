@@ -1,4 +1,5 @@
 #!/usr/bin/python
+ # pylint: disable=unused-wildcard-import, method-hidden
 
 import re
 import sys
@@ -98,7 +99,6 @@ class Parser:
             tokens.selectNext()
 
         elif(type_ == "IF"):
-
             originalNode = IfNode(None)
             ifNode = originalNode
             while(type_ == "IF" or type_ == "ELSEIF"):
@@ -138,6 +138,24 @@ class Parser:
             result = originalNode
             tokens.selectNext()
 
+        elif(type_ == "LOCAL"):
+            tokens.selectNext()
+            type_ = tokens.actual.type
+            symb = tokens.actual.value
+            if(type_ != "IDENTIFIER"):
+                raise Exception("Local definido errado")
+            tokens.selectNext()
+            type_ = tokens.actual.type
+            if(type_ != "DEFINICAO"):
+                raise Exception("Local definido errado")
+            tokens.selectNext()
+            type_ = tokens.actual.value
+            if(type_ != "Int" and type_ != "Bool" and type_ != "String"):
+                raise Exception("Local definido errado")
+            
+            Definition(symb, type_)
+            tokens.selectNext()
+        
         type_ = tokens.actual.type
         if(type_ == "ENTER"):
             tokens.selectNext()
@@ -215,6 +233,12 @@ class Parser:
         elif(type_ == "IDENTIFIER"):
             INode = IndentifierNode(tokens.actual.value)
             result = INode
+            tokens.selectNext()
+        elif(type_ == "TRUE" or type_ == "FALSE"):
+            result = BoolVal(tokens.actual.value)
+            tokens.selectNext()
+        elif(type_ == "STRING"):
+            result = StringVal(tokens.actual.value)
             tokens.selectNext()
         else:
             raise Exception("Deu errado")
