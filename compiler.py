@@ -258,8 +258,12 @@ f = open(sys.argv[1], "r")
 entrada = []
 entrada.append(str(f.read()))
 
+Assembler().initText()
+
 parser = Parser()
 result = parser.run(entrada[0])
 result.Evaluate()
+
+Assembler().endText()
 
 #SO PULA 1 QUANDO EH BOLINHA!!

@@ -1,89 +1,59 @@
+import itertools
 symbol_table = {}
 
 class Node:
+    id_generator = itertools.count(0)
     def __init__(self, value):
         self.value = value
         self.children = []
+        self.id = next(self.id_generator)
 
 class BinOp(Node):
     def Evaluate(self):
+        ass = Assembler()
         l_child = self.children[0].Evaluate()
+        ass.receiveString("PUSH EBX")
         r_child = self.children[1].Evaluate()
-        # if(l_child[1] == "bool" and r_child[1] == "int"):
-        #     if(l_child[[0]]):
-        #         l_child[0] = 1
-        #     else:
-        #         l_child[0] = 0
-        #     if(r_child[0] != 0):
-        #         r_child[0] = True
-        #     else:
-        #         r_child[0] = True
-        # if(l_child[1] == "int" and r_child[1] == "bool"):
-        #     if(r_child[[0]]):
-        #         r_child[0] = 1
-        #     else:
-        #         r_child[0] = 0
-        #     if(l_child[0] != 0):
-        #         l_child[0] = True
-        #     else:
-        #         l_child[0] = True
-        
-        if(l_child[1] == "string"):
-            if(self.value == "=="):
-                result = l_child == r_child
-            elif(self.value != "*"):
-                raise Exception("Operação não permitida")
-            else:
-                result = l_child[0]
-                if(r_child[1] == "bool"):
-                    if(r_child[0]):
-                        result += "true"
-                    else:
-                        result += "false"
-                if(r_child[1] == "int"):
-                    result += str(r_child[0])
-                if(r_child[1] == "string"):
-                    result += r_child[0]
-                return (result, "string")
-        elif(r_child[1] == "string"):
-            if(self.value == "=="):
-                result = l_child == r_child
-            elif(self.value != "*"):
-                raise Exception("Operação não permitida")
-            else:
-                if(l_child[1] == "bool"):
-                    if(l_child[0]):
-                        result = "true"
-                    else:
-                        result = "false"
-                if(l_child[1] == "int"):
-                    result = str(l_child[0])
-                result += r_child[0]
-                return (result, "string")
-            
+        ass.receiveString("POP EAX")
 
-        else:       
-            l_child = l_child[0]
-            r_child = r_child[0]
-            if(self.value == "+"):
-                result = l_child + r_child
-            elif(self.value == "-"):
-                result = l_child - r_child
-            elif(self.value == "*"):
-
-                result = l_child * r_child
-            elif(self.value == "/"):
-                result = int(l_child / r_child)
-            elif(self.value == "&&"):
-                result = l_child and r_child
-            elif(self.value == "||"):
-                result = l_child or r_child
-            elif(self.value == ">"):
-                result = l_child > r_child
-            elif(self.value == "<"):
-                result = l_child < r_child
-            elif(self.value == "=="):
-                result = l_child == r_child
+        l_child = l_child[0]
+        r_child = r_child[0]
+        if(self.value == "+"):
+            ass.receiveString("ADD EAX, EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = l_child + r_child
+        elif(self.value == "-"):
+            ass.receiveString("SUB EAX, EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = l_child - r_child
+        elif(self.value == "*"):
+            ass.receiveString("IMUL EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = l_child * r_child
+        elif(self.value == "/"):
+            ass.receiveString("DIV EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = int(l_child / r_child)
+        elif(self.value == "&&"):
+            ass.receiveString("AND EAX, EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = l_child and r_child
+        elif(self.value == "||"):
+            ass.receiveString("OR EAX, EBX")
+            ass.receiveString("MOV EBX, EAX")
+            result = l_child or r_child
+        elif(self.value == ">"):
+            ass.receiveString("CMP EAX, EBX")
+            ass.receiveString("CALL binop_jg")
+            result = l_child > r_child
+        elif(self.value == "<"):
+            ass.receiveString("CMP EAX, EBX")
+            ass.receiveString("CALL binop_jl")
+            result = l_child < r_child
+        elif(self.value == "=="):
+            ass.receiveString("CMP EAX, EBX")
+            ass.receiveString("CALL binop_je")
+            result = l_child == r_child
 
         if(type(result) == bool):
             return (result, "bool")
@@ -93,10 +63,13 @@ class UnOp(Node):
     def Evaluate(self):
         child = self.children[0].Evaluate()[0]
         if(self.value == "+"):
+            Assembler().receiveString("MOV EBX, " + str(child))
             return(child, "int")
         elif(self.value == "-"):
+            Assembler().receiveString("MOV EBX, -" + str(child))
             return(-child, "int")
         elif(self.value == "!"):
+            Assembler().receiveString("MOV EBX, !" + str(child))
             return(not child, "bool")
 
 class NoOp(Node):
@@ -110,13 +83,17 @@ class Statements(Node):
 
 class IntVal(Node):
     def Evaluate(self):
+        comando = "MOV EBX, " + str(self.value)
+        Assembler().receiveString(comando)
         return (self.value, "int")
 
 class BoolVal(Node):
     def Evaluate(self):
         if(self.value == "true"):
+            Assembler().receiveString("MOV EBX, True")
             return (True, "bool")
         if(self.value == "false"):
+            Assembler().receiveString("MOV EBX, False")
             return (False, "bool")
 
 class StringVal(Node):
@@ -125,19 +102,17 @@ class StringVal(Node):
 
 class PrintNode(Node):
     def Evaluate(self):
-        child = self.children[0].Evaluate()
-        if(child[1] == "bool"):
-            if(child[0]):
-                print("true")
-            else:
-                print("false")
-        else:
-            print(child[0])
+        ass = Assembler()
+        self.children[0].Evaluate()
+        ass.receiveString("PUSH EBX")
+        ass.receiveString("CALL print")
+        ass.receiveString("POP EBX")
 
 class IndentifierNode(Node):
     def Evaluate(self):
         symbtable = SymbolTable(self.value)
-        return symbtable.getter()
+        Assembler().receiveString("MOV EBX, [EBP" + str(symbtable.getter()[2]) + "]")
+        return (symbtable.getter()[0], symbtable.getter()[1])
 
 class InputNode(Node):
     def Evaluate(self):
@@ -146,24 +121,45 @@ class InputNode(Node):
 
 class WhileNode(Node):
     def Evaluate(self):
-        while(self.children[0].Evaluate()[0]):
-            self.children[1].Evaluate()
+        ass = Assembler()
+        ass.receiveString("LOOP_" + str(self.id) + ": ")
+        self.children[0].Evaluate()
+        ass.receiveString("CMP EXB, False")
+        ass.receiveString("JE EXIT_" + str(self.id))
+        self.children[1].Evaluate()
+        ass.receiveString("JMP LOOP_" + str(self.id))
+        ass.receiveString("EXIT_" + str(self.id))
+
 
 class IfNode(Node):
     def Evaluate(self):
-        if(self.children[0].Evaluate()[0]):
-            self.children[1].Evaluate()
-        elif(len(self.children) == 3):
+        ass = Assembler()
+        ass.receiveString("LOOP_" + str(self.id) + ": ")
+        self.children[0].Evaluate()
+        ass.receiveString("CMP EXB, False")
+        if(len(self.children) == 3):
+            ass.receiveString("JMP LOOP_" + str(self.children[2].id))
+        else:
+            ass.receiveString("JE EXIT_" + str(self.id))
+        self.children[1].Evaluate()
+        ass.receiveString("JE EXIT_" + str(self.id))
+        if(len(self.children) == 3):
             self.children[2].Evaluate()
+        ass.receiveString("EXIT_" + str(self.id))
 
 class ElseNode(Node):
     def Evaluate(self):
         self.children[0].Evaluate()
 
+shift = 0
+
 #Funcao para declarar tipo
 def Definition(symbol, tipo):
-    symbol_table[symbol] = [None, tipo]
+    global shift
+    shift -= 4
+    symbol_table[symbol] = [None, tipo, shift]
 
+    Assembler().receiveString("PUSH DWORD 0")
 
 #Node para "="
 class Assignment(Node):
@@ -171,6 +167,8 @@ class Assignment(Node):
         set_value = self.children[1].Evaluate()[0]
         symbtable = SymbolTable(self.children[0].value)
         symbtable.setter(set_value)
+
+        Assembler().receiveString("MOV [EBP" + str(symbtable.getter()[2]) + "], EBX")
 
 class SymbolTable:
     def __init__(self, symbol):
@@ -186,3 +184,23 @@ class SymbolTable:
         if(self.symbol not in symbol_table):
             raise Exception("Variável não definida")
         symbol_table[self.symbol][0] = value
+
+class Assembler:
+    @staticmethod
+    def initText():
+        with open('program.asm', 'w') as f1:
+            for line in open('startText.txt'):
+                f1.write(line)
+
+
+    @staticmethod
+    def receiveString(comando):
+        with open("program.asm", "a") as f1:
+            f1.write("\n" + comando)
+    
+    @staticmethod
+    def endText():
+        with open("program.asm", "a") as f1:
+            f1.write("\n" + "POP EBP")
+            f1.write("\n" + "MOV EAX, 1")
+            f1.write("\n" + "INT 0x80")
