@@ -10,11 +10,11 @@ class Tokenizer:
         self.actual = None
         self.value_dict = {"+": "PLUS", "-": "MINUS", "*": "MULTIPLY", "/": "DIVIDE", "(": "OPEN_PAR", 
                             ")": "CLOSE_PAR", "=": "IGUAL", "\n": "ENTER", "!": "NOT", ">": "MAIOR",
-                            "<": "MENOR"}
+                            "<": "MENOR", ",": "COMMA"}
         self.reserved_dict = {"println": "PRINT", "if": "IF", "elseif": "ELSEIF", "else": "ELSE", 
                             "while": "WHILE", "end": "END", "readline": "INPUT", "local": "LOCAL",
                             "Int": "INTDEFINE", "Bool": "BOOLDEFINE", "String": "STRINGDEFINE",
-                            "true": "TRUE", "false": "FALSE"}
+                            "true": "TRUE", "false": "FALSE", "function": "FUNCTION", "return": "RETURN"}
         self.double_define = {"&": "AND", "|": "OR", "=": "COMPARACAO", ":": "DEFINICAO"}
 
     def selectNext(self):

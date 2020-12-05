@@ -19,44 +19,126 @@ class Parser:
         tokens = parser.tokens
         StatNode = Statements(None)
         while(tokens.actual.type not in bockTypes):
-            result = parser.parseCommand()
+            if(tokens.actual.type == "FUNCTION"):
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "IDENTIFIER"):
+                    raise Exception("Identifier vem depois de function")
+                
+                funcNode = FuncDec(tokens.actual.value)
+
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "OPEN_PAR"):
+                    raise Exception("function sem parentesis")
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                
+                while(type_ == "IDENTIFIER"):
+                    variable_name = tokens.actual.value
+
+                    tokens.selectNext()
+                    type_ = tokens.actual.type
+                    if(type_ != "DEFINICAO"):
+                        raise Exception("Deveria ter ::")
+                    tokens.selectNext()
+                    type_ = tokens.actual.type
+                    if(type_ != "STRINGDEFINE" and type_ != "BOOLDEFINE" and type_ != "INTDEFINE"):
+                        raise Exception("Tipo não reconhecido")
+                    
+                    VarNode = Definition([variable_name, tokens.actual.value])
+                    funcNode.children.append(VarNode)
+
+                    tokens.selectNext()
+                    type_ = tokens.actual.type
+                    if(type_ == "COMMA"):
+                        tokens.selectNext()
+                        type_ = tokens.actual.type
+                        if(type_ != "IDENTIFIER"):
+                            raise Exception("Virgula sem variavel depois")
+                    else:
+                        if(type_ == "IDENTIFIER"):
+                            raise Exception("Variaveis devem ser separadas por virgulas")
+
+                if(type_ != "CLOSE_PAR"):
+                    raise Exception("Parentesis não é fechado")
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "DEFINICAO"):
+                    raise Exception("Deveria ter ::")
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "STRINGDEFINE" and type_ != "BOOLDEFINE" and type_ != "INTDEFINE"):
+                    raise Exception("Tipo não reconhecido")
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "ENTER"):
+                    raise Exception("Pule linha depois da declaracao")
+                tokens.selectNext()
+                type_ = tokens.actual.type
+
+                StNode = Statements(None)
+                while(tokens.actual.type != "END"):
+                    StNode.children.append(parser.parseCommand(True))
+
+                funcNode.children.append(StNode)
+                
+                tokens.selectNext()
+                type_ = tokens.actual.type
+                if(type_ != "ENTER"):
+                    raise Exception("Pule linha apos o end")
+                
+                result = funcNode
+
+            else:
+                result = parser.parseCommand(False)
             StatNode.children.append(result)
         return StatNode
 
     @staticmethod
-    def parseCommand():
+    def parseCommand(isFunction):
         tokens = parser.tokens
         type_ = tokens.actual.type
         result = NoOp(None)
 
         if(type_ == "IDENTIFIER"):
-            VarNode = IndentifierNode(tokens.actual.value)
+            identifier_value = tokens.actual.value
             tokens.selectNext()
             type_ = tokens.actual.type
 
-            if(type_ != "IGUAL"):
-                raise Exception("Variável solta no código")
-
-            tokens.selectNext()
-            type_ = tokens.actual.type
-
-            EqNode = Assignment(None)
-            EqNode.children.append(VarNode)
-
-            if(type_ == "INPUT"):
-                readNode = InputNode(None)
+            if(type_ == "OPEN_PAR"):
                 tokens.selectNext()
-                type1 = tokens.actual.type
+                type_ = tokens.actual.type
+                if(type_ != "CLOSE_PAR"):
+                    raise Exception("Feche o parentesis")
                 tokens.selectNext()
-                type2 = tokens.actual.type
+                result = FuncCall(identifier_value)
+
+            elif(type_ == "IGUAL"):
                 tokens.selectNext()
-                if(type1 != "OPEN_PAR" or type2 != "CLOSE_PAR"):
-                    raise Exception("readline nao seguido de ()")
-                EqNode.children.append(readNode)
+                type_ = tokens.actual.type
+
+                VarNode = IndentifierNode(identifier_value)
+                EqNode = Assignment(None)
+                EqNode.children.append(VarNode)
+
+                if(type_ == "INPUT"):
+                    readNode = InputNode(None)
+                    tokens.selectNext()
+                    type1 = tokens.actual.type
+                    tokens.selectNext()
+                    type2 = tokens.actual.type
+                    tokens.selectNext()
+                    if(type1 != "OPEN_PAR" or type2 != "CLOSE_PAR"):
+                        raise Exception("readline nao seguido de ()")
+                    EqNode.children.append(readNode)
+                else:
+                    EqNode.children.append(parser.parseRelExpression())
+                
+                result = EqNode
+
             else:
-                EqNode.children.append(parser.parseRelExpression())
-            
-            result = EqNode
+                raise Exception("Variável solta no código")
                 
         elif(type_ == "PRINT"):
             PNode = PrintNode(None)
@@ -153,9 +235,16 @@ class Parser:
             if(type_ != "Int" and type_ != "Bool" and type_ != "String"):
                 raise Exception("Local definido errado")
             
-            Definition(symb, type_)
+            defineNode = Definition([symb, type_])
             tokens.selectNext()
+            result = defineNode
         
+        elif(type_ == "RETURN" and isFunction):
+            returnNode = ReturnNode(None)
+            tokens.selectNext()
+            returnNode.children.append(parser.parseRelExpression())
+            return returnNode
+
         type_ = tokens.actual.type
         if(type_ == "ENTER"):
             tokens.selectNext()
@@ -231,9 +320,27 @@ class Parser:
                 raise Exception("Parentesis não fechado")
             tokens.selectNext()
         elif(type_ == "IDENTIFIER"):
-            INode = IndentifierNode(tokens.actual.value)
-            result = INode
+            valor = tokens.actual.value
             tokens.selectNext()
+            if(tokens.actual.type == "OPEN_PAR"):
+                fCallNode = FuncCall(valor)
+                tokens.selectNext()
+                params = False
+                if(tokens.actual.type != "CLOSE_PAR"):
+                    params = True
+                while(params):
+                    params = False
+                    fCallNode.children.append(parser.parseRelExpression())
+                    if(tokens.actual.type != "CLOSE_PAR"):
+                        params = True
+                        if(tokens.actual.type != "COMMA"):
+                            raise Exception("Separe variaveis com virgula")
+                        tokens.selectNext()
+                tokens.selectNext()
+                result = fCallNode
+            else:
+                INode = IndentifierNode(valor)
+                result = INode
         elif(type_ == "TRUE" or type_ == "FALSE"):
             result = BoolVal(tokens.actual.value)
             tokens.selectNext()
@@ -260,6 +367,6 @@ entrada.append(str(f.read()))
 
 parser = Parser()
 result = parser.run(entrada[0])
-result.Evaluate()
+result.Evaluate(0)
 
 #SO PULA 1 QUANDO EH BOLINHA!!
