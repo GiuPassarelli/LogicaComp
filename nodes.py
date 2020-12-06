@@ -195,7 +195,8 @@ class Definition(Node):
 
 class ReturnNode(Node):
     def Evaluate(self, table):
-        table["return"] = self.children[0].Evaluate(table)
+        if("return" not in table):
+            table["return"] = self.children[0].Evaluate(table)
 
 #Funcao para declarar tipo
 # def Definition(symbol, tipo):

@@ -14,7 +14,7 @@ class PrePro:
 
 class Parser:
     @staticmethod
-    def parseBlock():
+    def parseBlock(isFunction):
         bockTypes = ["EOF", "END", "ELSEIF", "ELSE"]
         tokens = parser.tokens
         StatNode = Statements(None)
@@ -80,6 +80,8 @@ class Parser:
                 StNode = Statements(None)
                 while(tokens.actual.type != "END"):
                     StNode.children.append(parser.parseCommand(True))
+                
+                isFunction = False
 
                 funcNode.children.append(StNode)
                 
@@ -91,7 +93,7 @@ class Parser:
                 result = funcNode
 
             else:
-                result = parser.parseCommand(False)
+                result = parser.parseCommand(isFunction)
             StatNode.children.append(result)
         return StatNode
 
@@ -107,12 +109,21 @@ class Parser:
             type_ = tokens.actual.type
 
             if(type_ == "OPEN_PAR"):
+                fCallNode = FuncCall(identifier_value)
                 tokens.selectNext()
-                type_ = tokens.actual.type
-                if(type_ != "CLOSE_PAR"):
-                    raise Exception("Feche o parentesis")
+                params = False
+                if(tokens.actual.type != "CLOSE_PAR"):
+                    params = True
+                while(params):
+                    params = False
+                    fCallNode.children.append(parser.parseRelExpression())
+                    if(tokens.actual.type != "CLOSE_PAR"):
+                        params = True
+                        if(tokens.actual.type != "COMMA"):
+                            raise Exception("Separe variaveis com virgula")
+                        tokens.selectNext()
                 tokens.selectNext()
-                result = FuncCall(identifier_value)
+                result = fCallNode
 
             elif(type_ == "IGUAL"):
                 tokens.selectNext()
@@ -170,7 +181,7 @@ class Parser:
                 raise Exception("Pule linha depois do while")
 
             tokens.selectNext()
-            whileNode.children.append(parser.parseBlock())
+            whileNode.children.append(parser.parseBlock(isFunction))
 
             result = whileNode
 
@@ -193,7 +204,7 @@ class Parser:
                     raise Exception("Pule linha depois do if")
 
                 tokens.selectNext()
-                ifNode.children.append(parser.parseBlock())
+                ifNode.children.append(parser.parseBlock(isFunction))
 
                 type_ = tokens.actual.type
                 if(type_ == "ELSEIF"):
@@ -211,7 +222,7 @@ class Parser:
                         raise Exception("Pule linha depois do if")
 
                     tokens.selectNext()
-                    elseNode.children.append(parser.parseBlock())
+                    elseNode.children.append(parser.parseBlock(isFunction))
 
             type_ = tokens.actual.type
             if(type_ != "END"):
@@ -243,7 +254,10 @@ class Parser:
             returnNode = ReturnNode(None)
             tokens.selectNext()
             returnNode.children.append(parser.parseRelExpression())
-            return returnNode
+            result = returnNode
+        
+        elif(type_ == "RETURN" and not(isFunction)):
+            raise Exception("Return so funciona dentro de funcoes")
 
         type_ = tokens.actual.type
         if(type_ == "ENTER"):
@@ -356,7 +370,7 @@ class Parser:
         clean = PrePro.filter(code)
         parser.tokens = Tokenizer(clean)
         parser.tokens.selectNext()
-        result = parser.parseBlock()
+        result = parser.parseBlock(False)
         if(parser.tokens.actual.type != "EOF"):
             raise Exception("Não terminou direito")
         return(result)
