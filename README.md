@@ -1,5 +1,6 @@
 # LogicaComp
 
+Compilador para a linguagem julia
 
 ## Diagrama sintático:
 
